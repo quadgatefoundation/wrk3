@@ -1,0 +1,76 @@
+name: CI
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+
+jobs:
+  build-linux-x64:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libssl-dev build-essential
+      
+      - name: Build
+        run: make
+      
+      - name: Test binary
+        run: |
+          ./wrk --version || true
+          file wrk
+
+  build-macos-x64:
+    runs-on: macos-12
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install OpenSSL
+        run: |
+          brew install openssl@3 || brew install openssl
+      
+      - name: Build
+        run: make
+      
+      - name: Test binary
+        run: |
+          ./wrk --version || true
+          file wrk
+
+  build-macos-arm64:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install OpenSSL
+        run: |
+          brew install openssl@3 || brew install openssl
+      
+      - name: Build
+        run: make
+      
+      - name: Test binary
+        run: |
+          ./wrk --version || true
+          file wrk
+          # Verify it's ARM64
+          file wrk | grep -q "arm64" || (echo "Expected ARM64 binary" && exit 1)
+
+  # Note: Linux ARM64 builds are complex and may require cross-compilation
+  # For now, we focus on x64 Linux and native ARM64 macOS builds
+  # build-linux-arm64:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - name: Install dependencies
+  #       run: |
+  #         sudo apt-get update
+  #         sudo apt-get install -y libssl-dev build-essential
+  #     - name: Build (native x64, would need ARM64 runner for native)
+  #       run: make
+

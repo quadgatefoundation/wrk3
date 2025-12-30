@@ -11,8 +11,24 @@ else ifeq ($(TARGET), darwin)
 	# is not set then it's forced to 10.4, which breaks compile on Mojave.
 	export MACOSX_DEPLOYMENT_TARGET = $(shell sw_vers -productVersion)
 	LDFLAGS += -pagezero_size 10000 -image_base 100000000
-	LIBS += -L/usr/local/opt/openssl/lib
-	CFLAGS += -I/usr/local/include -I/usr/local/opt/openssl/include
+	# Support both Intel and Apple Silicon Homebrew paths
+	OPENSSL_PREFIX := $(shell if [ -d /opt/homebrew/opt/openssl@3/include ]; then echo /opt/homebrew/opt/openssl@3; elif [ -d /opt/homebrew/opt/openssl/include ]; then echo /opt/homebrew/opt/openssl; elif [ -d /usr/local/opt/openssl@3/include ]; then echo /usr/local/opt/openssl@3; elif [ -d /usr/local/opt/openssl/include ]; then echo /usr/local/opt/openssl; else echo ""; fi)
+	ifeq ($(OPENSSL_PREFIX),)
+		# Try pkg-config as fallback
+		OPENSSL_CFLAGS := $(shell pkg-config --cflags openssl 2>/dev/null)
+		OPENSSL_LIBS := $(shell pkg-config --libs openssl 2>/dev/null)
+		ifneq ($(OPENSSL_CFLAGS),)
+			CFLAGS += $(OPENSSL_CFLAGS)
+			LIBS := $(filter-out -lcrypto -lssl,$(LIBS)) $(OPENSSL_LIBS)
+		else
+			# Default fallback
+			LIBS += -L/usr/local/opt/openssl/lib
+			CFLAGS += -I/usr/local/include -I/usr/local/opt/openssl/include
+		endif
+	else
+		LIBS += -L$(OPENSSL_PREFIX)/lib
+		CFLAGS += -I/usr/local/include -I$(OPENSSL_PREFIX)/include
+	endif
 else ifeq ($(TARGET), linux)
         CFLAGS  += -D_POSIX_C_SOURCE=200809L -D_BSD_SOURCE
 	LIBS    += -ldl

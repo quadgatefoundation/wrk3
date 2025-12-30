@@ -1,0 +1,53 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-and-release:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-14, macos-12]
+        include:
+          - os: ubuntu-latest
+            name: linux-x64
+            artifact_name: wrk-linux-x64
+          - os: macos-14
+            name: macos-arm64
+            artifact_name: wrk-macos-arm64
+          - os: macos-12
+            name: macos-x64
+            artifact_name: wrk-macos-x64
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install dependencies (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libssl-dev build-essential
+      
+      - name: Install OpenSSL (macOS)
+        if: startsWith(matrix.os, 'macos')
+        run: |
+          brew install openssl@3 || brew install openssl
+      
+      - name: Build
+        run: make
+      
+      - name: Test binary
+        run: |
+          ./wrk --version || true
+          file wrk
+      
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: wrk
+          retention-days: 30
+

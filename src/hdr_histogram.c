@@ -7,7 +7,9 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <math.h>
+#if defined(__x86_64__) || defined(__i386__) || defined(_M_X64) || defined(_M_IX86)
 #include <x86intrin.h>
+#endif
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
